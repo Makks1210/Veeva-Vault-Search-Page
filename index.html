@@ -36,11 +36,33 @@
         .search-button:hover {
             background-color: #357ae8;
         }
+        h1{
+		font-size:80px;
+		background: rgb(2,0,36);
+		background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(255,2,28,1) 47%, rgba(0,212,255,1) 100%);
+		color:transparent;
+		background-size: 500% 500%;
+		background-clip: text;
+		-webkit-background-clip: text;
+		animation: maha 2s ease infinite;
+		}
+		
+		@keyframes maha{
+		0%{
+        background-position-x:0%;
+		}
+		50%{
+        background-position-x:100%;
+		}
+		100%{
+        background-position-x:0%;
+    	}
+	}
     </style>
 </head>
 <body>
     <div class="search-container">
-        <h1>Search</h1>
+        <h1>Veeva QDocs</h1>
         <input type="text" class="search-bar" id="search-input" placeholder="Search the web...">
    <button class="search-button" onclick="performSearch()">Search</button> 
     </div>
@@ -50,7 +72,7 @@
             const query = document.getElementById('search-input').value;
             if (query) {
                 // Replace this with any search logic or a redirect to Google
-                 // const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                 // const searchUrl = `https://www.gooVeeva QDocsgle.com/search?q=${encodeURIComponent(query)}`;
                 window.open(searchUrl, '_blank');
             } else {
                 alert('Please enter a search query');
