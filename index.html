@@ -1,83 +1,116 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Search Page</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .search-container {
-            text-align: center;
-        }
-        .search-bar {
-            width: 400px;
-            padding: 10px;
-            border-radius: 24px;
-            border: 1px solid #dcdcdc;
-            font-size: 18px;
-            outline: none;
-        }
-        .search-button {
-            padding: 10px 20px;
-            margin-left: 10px;
-            font-size: 18px;
-            border: none;
-            background-color: #4285f4;
-            color: white;
-            border-radius: 24px;
-            cursor: pointer;
-            outline: none;
-        }
-        .search-button:hover {
-            background-color: #357ae8;
-        }
-        h1{
-		font-size:80px;
-		background: rgb(2,0,36);
-		background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(255,2,28,1) 47%, rgba(0,212,255,1) 100%);
-		color:transparent;
-		background-size: 500% 500%;
-		background-clip: text;
-		-webkit-background-clip: text;
-		animation: maha 2s ease infinite;
-		}
-		
-		@keyframes maha{
-		0%{
-        background-position-x:0%;
-		}
-		50%{
-        background-position-x:100%;
-		}
-		100%{
-        background-position-x:0%;
-    	}
-	}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veeva QDocs</title>
+<style>
+        /* Your existing styles */
+</style>
 </head>
 <body>
-    <div class="search-container">
-        <h1>Veeva QDocs</h1>
-        <input type="text" class="search-bar" id="search-input" placeholder="Search...">
-   <button class="search-button" onclick="performSearch()">Search</button> 
-    </div>
-
+<div class="container">
+<div id="search-section">
+<h1>Veeva QDocs</h1>
+<input type="text" id="search-input" placeholder="Search Qdocs Object...." class="search-bar" required>
+<button class="search-button" onclick="performSearch()">Search</button>
+<div id="error-message" style="color: red; margin-top: 10px;"></div>
+</div>
+ 
+        <div id="login-section" style="display: none;">
+<h1>Login</h1>
+<input type="text" id="username" placeholder="Enter Username" class="login-input" required><br>
+<input type="password" id="password" placeholder="Enter Password" class="login-input" required><br>
+<button class="login-button" onclick="performLogin()">Fetch Metadata</button>
+<div id="table-container"></div>
+<div id="login-error-message" style="color: red; margin-top: 10px;"></div>
+</div>
+ 
+        <table id="metadata-table">
+<thead>
+<tr>
+<th>Object Label</th>
+<th>Name</th>
+<th>Status</th>
+<th>Configuration State</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+ 
     <script>
         function performSearch() {
-            const query = document.getElementById('search-input').value;
-            if (query) {
-                // Replace this with any search logic or a redirect to Google
-                 // const searchUrl = `https://www.gooVeeva QDocsgle.com/search?q=${encodeURIComponent(query)}`;
-                window.open(searchUrl, '_blank');
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            if (query === 'qdocs') {
+                document.getElementById('search-section').style.display = 'none';
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('error-message').innerText = ''; 
             } else {
-                alert('Please enter a search query');
+                document.getElementById('error-message').innerText = 'Error: Please enter "Qdocs" to proceed.';
             }
         }
-    </script>
+ 
+        async function performLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+ 
+            try {
+                const loginResponse = await fetch('http://localhost:3000/proxy/api/v24.1/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+ 
+                if (!loginResponse.ok) {
+                    const errorText = await loginResponse.text();
+                    throw new Error('Login failed: ' + errorText);
+                }
+ 
+                const loginData = await loginResponse.json();
+                const sessionId = loginData.sessionId;
+ 
+                const metadataResponse = await fetch('http://localhost:3000/proxy/api/v24.1/metadata/vobjects', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': sessionId,
+                        'Accept': 'application/json'
+                    }
+                });
+ 
+                if (!metadataResponse.ok) {
+                    const metadataErrorText = await metadataResponse.text();
+                    throw new Error('Metadata fetch failed: ' + metadataErrorText);
+                }
+ 
+                const metadata = await metadataResponse.json();
+                displayMetadataInTable(metadata.objects);
+ 
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('login-error-message').innerText = error.message;
+            }
+        }
+ 
+        function displayMetadataInTable(objects) {
+            const tableBody = document.getElementById('metadata-table').querySelector('tbody');
+            tableBody.innerHTML = '';
+ 
+            const rows = objects.filter(obj => obj.name.endsWith('__sys')).map(obj => `
+<tr>
+<td>${obj.label}</td>
+<td>${obj.name}</td>
+<td>${obj.status.join(', ')}</td>
+<td>${obj.configuration_state}</td>
+</tr>
+            `).join('');
+ 
+            tableBody.innerHTML += rows;
+            document.getElementById('metadata-table').style.display = 'table'; 
+        }
+</script>
 </body>
 </html>
