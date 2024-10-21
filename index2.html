@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veeva QDocs Search</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            width: 80%;
+        }
+        .input-field {
+            width: 60%;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-radius: 24px;
+            border: 1px solid #ddd;
+        }
+        .button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 24px;
+            background-color: #4285f4;
+            color: white;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #357ae8;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+        .results {
+            margin-top: 20px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #fff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+.document-count {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+         <input type="text" id="search-input" class="input-field" placeholder="Enter search term...">
+        <button class="button" onclick="searchDocuments()">Search Documents</button>
+        <div id="error-message" class="error-message"></div>
+          <div id="document-count" class="document-count"></div>
+
+        <!-- Table to display the results -->
+        <table id="data-table">
+            <thead>
+                <tr>
+                     <th>DocumentID</th>
+                    <th>DocumentName</th>
+                    <th>LifeCycle</th>
+                    <th>DocumentType</th>
+                    <th>DocumentStatus</th>
+                   
+
+                    
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Table rows will be inserted dynamically here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let sessionId = ''; // Declare sessionId globally
+
+        // Automatically perform login when the page loads
+        window.onload = performLogin;
+
+        async function performLogin() {
+            const username = 'prana.user10@partnersi-prana4life.com';
+            const password = 'PranaU$er10';
+            const errorMessage = document.getElementById('error-message');
+            const documentCount = document.getElementById('document-count');
+
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+
+            try {
+                const loginResponse = await fetch(
+                    'https://cors-anywhere.herokuapp.com/https://partnersi-prana4life-Quality.veevavault.com/api/v24.1/auth',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: formData,
+                    }
+                );
+
+                if (!loginResponse.ok) {
+                    const errorText = await loginResponse.text();
+                    throw new Error(`Login failed: ${errorText}`);
+                }
+
+                const loginData = await loginResponse.json();
+                //console.log('Login Response:', loginData);
+
+                sessionId = loginData.sessionId;  // Store sessionId
+                errorMessage.innerText = 'Login successful! You can now search for documents.';
+            } catch (error) {
+               // console.error('Login Error:', error);
+                errorMessage.innerText = error.message;
+            }
+        }
+
+        async function searchDocuments() {
+            const query = document.getElementById('search-input').value.trim();
+            const errorMessage = document.getElementById('error-message');
+            const dataTableBody = document.getElementById('data-table').getElementsByTagName('tbody')[0];
+const documentCount = document.getElementById('document-count'); // For document count display
+
+            if (!query) {
+                errorMessage.innerText = 'Please enter a search term.';
+                dataTableBody.innerHTML = ''; // Clear table if no search term
+documentCount.innerText = '';
+                return;
+            }
+
+            if (!sessionId) {
+                errorMessage.innerText = 'You must log in first.';
+                return;
+            }
+
+            try {
+                const apiUrl = `https://cors-anywhere.herokuapp.com/https://partnersi-prana4life-Quality.veevavault.com/api/v24.2/objects/documents?search=${encodeURIComponent(query)}`;
+                console.log(sessionId)
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': sessionId,  // Use sessionId directly, no 'Bearer'
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Search failed. Please try again.');
+                }
+
+                const data = await response.json();
+               // console.log('Search Response:', data);
+
+                if (data.responseStatus === 'FAILURE') {
+                    const errorDetail = data.errors[0];
+                    throw new Error(`Search error: ${errorDetail.message}`);
+                }
+                  
+              if(data.size===0){
+               console.log("data Not Found");
+                documentCount.innerText = 'No documents found';
+                  //errorMessage.innerText='data Not Found';
+                       dataTableBody.innerHTML = ''; // Clear table
+                    return;
+
+
+                     }
+
+                if (!data.documents || !Array.isArray(data.documents)) {
+                    throw new Error('Invalid response format: documents not found.');
+                }
+                console.log('data==>'+data.documents[0].document.id);
+
+
+                // Clear previous results
+                dataTableBody.innerHTML = '';
+               
+               documentCount.innerText = `${data.size} documents founddd`;
+              console.log(console.log('SIZE OF DATA==>'+data.size));
+
+                // Display the documents in a table
+                data.documents.forEach(document => {
+                    const row = dataTableBody.insertRow();
+                     
+                     const DocumentId = row.insertCell(0);
+                    DocumentId.innerText = document.document.id || 'N/A';
+                    
+                    // Insert Version ID
+                    const DocumentName = row.insertCell(1);
+                   // console.log('test0:', document);
+                    //console.log('test1:', document.version_id);
+                    //console.log('test2:', document.version_id || 'N/A');
+                    console.log('test3:', document);
+
+                    DocumentName.innerText = document.document.name__v || 'N/A';
+                    
+                    // Insert Binder
+                    const LifeCycle = row.insertCell(2);
+                    LifeCycle.innerText = document.document.lifecycle__v || 'N/A';
+                    
+                    const DocumentType = row.insertCell(3);
+                    DocumentType.innerText = document.document.type__v|| 'N/A';
+
+                    const DocumentStatus = row.insertCell(4);
+                    DocumentStatus.innerText = document.document.status__v || 'N/A';
+                    
+                    
+
+                });
+
+                errorMessage.innerText = ''; // Clear any previous error messages
+
+            } catch (error) {
+                //console.error('Error:', error);
+                errorMessage.innerText = error.message;
+                dataTableBody.innerHTML = ''; // Clear the table on error
+                 documentCount.innerText = ''; 
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
